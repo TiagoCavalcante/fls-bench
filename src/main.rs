@@ -1,5 +1,5 @@
-use std::time::Instant;
 use graphs::Graph;
+use std::{fs::File, io::Write, time::Instant};
 
 mod fls;
 mod yen;
@@ -30,7 +30,7 @@ fn check_path(
   assert_eq!(path.len(), unique.len());
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
   let size = 1_000;
   let density = 0.1;
   let start_vertex = 0;
@@ -101,5 +101,13 @@ fn main() {
     ));
   }
 
-  println!("{times:.6?}");
+  let mut yen_times = File::create("./target/yen_times")?;
+  let mut fls_times = File::create("./target/fls_times")?;
+
+  for time in &times {
+    yen_times.write(format!("{}\n", time.0).as_bytes())?;
+    fls_times.write(format!("{}\n", time.1).as_bytes())?;
+  }
+
+  Ok(())
 }
