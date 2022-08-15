@@ -22,6 +22,6 @@ $ ./target/build/fls-bench > times
 
 ## What is the difference?
 
-As you can see FLS is waaay faster than Yen's algorithm for finding paths with a specif length in unweighted graphs:
+As you can see FLS is waaay faster than Yen's algorithm for finding paths with a fixed length in unweighted graphs:
 
 ![Comparsion of Yen's algorithm and FLS](https://user-images.githubusercontent.com/62714153/184565536-e835e754-f3be-4c63-960b-d5f52bcba6ab.svg)
