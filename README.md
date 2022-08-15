@@ -8,16 +8,10 @@ The implementation of Yen's algorithm can be found [here](https://github.com/Tia
 
 The implementation of the fixed length search can be found [here](https://github.com/TiagoCavalcante/fixed-length-search).
 
-## How to build?
-
-```sh
-$ cargo build --release
-```
-
 ## How to run?
 
 ```sh
-$ ./target/build/fls-bench > times
+$ cargo run --release
 ```
 
 ## What is the difference?
