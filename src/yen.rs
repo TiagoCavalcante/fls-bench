@@ -92,24 +92,27 @@ pub fn yen(
           }
         }
 
-        for n in 0..root_path.len() - 1 {
-          let node = root_path[n];
+        for &node in
+          root_path.iter().take(root_path.len() - 1)
+        {
           let neighbors = graph.get_neighbors(node).clone();
           for neighbor in neighbors {
             graph.remove_edge(node, neighbor);
             filtered_edges.push((node, neighbor));
           }
         }
-        if let Some(spur_path) = bfs(&graph, spur_node, end)
+        if let Some(spur_path) = bfs(graph, spur_node, end)
         {
           let mut total_path = vec![];
 
-          for i in 0..root_path.len() - 1 {
-            total_path.push(root_path[i]);
+          for &node in
+            root_path.iter().take(root_path.len() - 1)
+          {
+            total_path.push(node);
           }
 
-          for i in 0..spur_path.len() {
-            total_path.push(spur_path[i]);
+          for &node in &spur_path {
+            total_path.push(node);
           }
 
           candidates.push(total_path);
@@ -136,5 +139,5 @@ pub fn yen(
     }
   }
 
-  return None;
+  None
 }

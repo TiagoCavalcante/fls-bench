@@ -1,8 +1,17 @@
+#![feature(test)]
+extern crate test;
+
 use graphs::Graph;
+use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use std::{fs::File, io::Write, time::Instant};
 
 mod fls;
 mod yen;
+
+enum Algorithm {
+  Yen,
+  Fls,
+}
 
 fn check_path(
   graph: &Graph,
@@ -34,79 +43,112 @@ fn main() -> std::io::Result<()> {
   let size = 1_000;
   let density = 0.1;
   let start_vertex = 0;
-  let end_vertex = 10;
-  let start_length = 3;
+  let end_vertex = 1;
+  let start_length = 1;
   let end_length = 100;
+  let run_amount = 10;
+  let warm_up_iterations = 100;
+  let seed = 79544948;
 
   let mut times = vec![];
 
   let mut graph = Graph::new(size);
 
+  for i in 1..warm_up_iterations {
+    graph.fill_undirected(
+      density * (i / warm_up_iterations) as f32,
+    );
+    let _ = test::black_box(yen::yen(
+      &mut graph,
+      start_vertex,
+      end_vertex,
+      start_length,
+    ));
+    let _ = test::black_box(fls::fls(
+      &graph,
+      start_vertex,
+      end_vertex,
+      start_length,
+    ));
+    graph.clear();
+  }
+
+  let mut rng = StdRng::seed_from_u64(seed);
+
   for length in start_length..=end_length {
-    let mut repeats = 0;
     let mut repeated_times = vec![];
 
-    while repeats != 10 {
+    for _ in 0..run_amount {
       graph.fill_undirected(density);
 
-      let now = Instant::now();
-      let yen_path = yen::yen(
-        &mut graph,
-        start_vertex,
-        end_vertex,
-        length,
-      );
-      let yen_time = now.elapsed().as_secs_f32();
-      let now = Instant::now();
+      // List of algorithm names to shuffle.
+      let mut algorithms =
+        vec![Algorithm::Yen, Algorithm::Fls];
 
-      let fls_path =
-        fls::fls(&graph, start_vertex, end_vertex, length);
-      let fls_time = now.elapsed().as_secs_f32();
+      let mut yen_time = 0.0;
+      let mut fls_time = 0.0;
 
-      if let (Some(yen_path), Some(fls_path)) =
-        (yen_path, fls_path)
-      {
-        check_path(
-          &graph,
-          &yen_path,
-          start_vertex,
-          end_vertex,
-          length,
-        );
-        check_path(
-          &graph,
-          &fls_path,
-          start_vertex,
-          end_vertex,
-          length,
-        );
+      // Randomize the order of algorithm execution.
+      algorithms.shuffle(&mut rng);
 
-        repeated_times.push((yen_time, fls_time));
+      for algo in algorithms {
+        let now = Instant::now();
 
-        repeats += 1;
+        let path = match algo {
+          Algorithm::Yen => test::black_box(yen::yen(
+            &mut graph,
+            start_vertex,
+            end_vertex,
+            length,
+          )),
+          Algorithm::Fls => test::black_box(fls::fls(
+            &graph,
+            start_vertex,
+            end_vertex,
+            length,
+          )),
+        };
+
+        let elapsed = now.elapsed().as_secs_f32();
+
+        if let Some(path) = path {
+          check_path(
+            &graph,
+            &path,
+            start_vertex,
+            end_vertex,
+            length,
+          );
+
+          match algo {
+            Algorithm::Yen => yen_time = elapsed,
+            Algorithm::Fls => fls_time = elapsed,
+          }
+        }
       }
 
+      repeated_times.push((yen_time, fls_time));
       graph.clear();
     }
 
-    let time = repeated_times
-      .iter()
-      .fold((0.0, 0.0), |acc, current| {
-        (acc.0 + current.0, acc.1 + current.1)
+    // Calculate the average time.
+    let (total_yen_time, total_fls_time) =
+      repeated_times.iter().fold((0.0, 0.0), |acc, &x| {
+        (acc.0 + x.0, acc.1 + x.1)
       });
 
     times.push((
-      time.0 / repeats as f32,
-      time.1 / repeats as f32,
+      total_yen_time / repeated_times.len() as f32,
+      total_fls_time / repeated_times.len() as f32,
     ));
   }
 
   let mut yen_times = File::create("./target/yen_times")?;
   let mut fls_times = File::create("./target/fls_times")?;
 
-  for time in &times {
-    yen_times.write(format!("{}\n", time.0).as_bytes())?;
-    fls_times.write(format!("{}\n", time.1).as_bytes())?;
+  for (yen, fls) in &times {
+    yen_times.write_all(format!("{}\n", yen).as_bytes())?;
+    fls_times.write_all(format!("{}\n", fls).as_bytes())?;
   }
 
   Ok(())
